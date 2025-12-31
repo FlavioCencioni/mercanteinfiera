@@ -1,0 +1,44 @@
+{
+  "rounds": [
+    {
+      "questionText": "Ordina le seguenti 10 città dalla più a sud alla più a nord:",
+      "items": ["Palermo", "Catania", "Napoli", "Roma", "Firenze", "Bologna", "Milano", "Torino", "Venezia", "Trento"]
+    },
+    {
+      "questionText": "Ordina i seguenti 10 numeri dal più piccolo al più grande:",
+      "items": ["42", "7", "13", "99", "0", "18", "56", "3", "27", "71"]
+    },
+    {
+      "questionText": "Ordina i seguenti 10 pianeti del Sistema Solare dal più vicino al Sole al più lontano:",
+      "items": ["Mercurio", "Venere", "Terra", "Marte", "Giove", "Saturno", "Urano", "Nettuno", "Plutone (storico)", "— (placeholder)"]
+    },
+    {
+      "questionText": "Ordina le seguenti 10 lettere in ordine alfabetico:",
+      "items": ["K", "A", "Z", "B", "M", "C", "Q", "D", "J", "E"]
+    },
+    {
+      "questionText": "Ordina i seguenti 10 mesi dal primo all’ultimo:",
+      "items": ["Aprile", "Gennaio", "Settembre", "Dicembre", "Marzo", "Giugno", "Agosto", "Febbraio", "Maggio", "Novembre"]
+    },
+    {
+      "questionText": "Ordina le seguenti 10 grandezze (in metri) dal più piccolo al più grande:",
+      "items": ["0.5", "2", "1.2", "10", "0.05", "3.5", "7", "0.2", "15", "5"]
+    },
+    {
+      "questionText": "Ordina i seguenti 10 animali per grandezza (dal più piccolo al più grande):",
+      "items": ["Formica", "Topo", "Gatto", "Cane", "Pecora", "Maiale", "Cavallo", "Mucca", "Rinoceronte", "Elefante"]
+    },
+    {
+      "questionText": "Ordina i seguenti 10 colori per lunghezza d’onda (dal più corta al più lunga):",
+      "items": ["Viola", "Blu", "Ciano", "Verde", "Giallo", "Arancione", "Rosso", "—", "—", "—"]
+    },
+    {
+      "questionText": "Ordina i seguenti 10 eventi della giornata dal più presto al più tardi:",
+      "items": ["Svegliarsi", "Colazione", "Andare a lavoro/scuola", "Pranzo", "Pausa pomeridiana", "Rientro", "Cena", "Relax", "Prepararsi per dormire", "Dormire"]
+    },
+    {
+      "questionText": "Ordina i seguenti 10 livelli/valori dal più basso al più alto:",
+      "items": ["1", "5", "2", "10", "3", "8", "4", "7", "6", "9"]
+    }
+  ]
+}

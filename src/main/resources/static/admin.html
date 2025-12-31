@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz Game - Admin</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: #f5576c;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        h2 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        button {
+            background: #f5576c;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+
+        button:hover {
+            background: #e0445a;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(245, 87, 108, 0.4);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .admin-section {
+            margin-bottom: 30px;
+        }
+
+        .rounds-list, .players-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .round-item, .player-item {
+            background: #fff5f7;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 4px solid #f5576c;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+
+        .btn-open {
+            background: #10b981;
+        }
+
+        .btn-open:hover {
+            background: #059669;
+        }
+
+        .btn-close {
+            background: #ef4444;
+        }
+
+        .btn-close:hover {
+            background: #dc2626;
+        }
+
+        .status-badge {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .status-open {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-closed {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .tab-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tab-button {
+            background: #ddd;
+            color: #333;
+        }
+
+        .tab-button.active {
+            background: #f5576c;
+            color: white;
+        }
+
+        .round-info {
+            flex: 1;
+        }
+
+        .round-title {
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+
+        .round-question {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .stats-badge {
+            background: #e0f2fe;
+            color: #0369a1;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 Pannello Admin</h1>
+        
+        <div class="tab-buttons">
+            <button class="tab-button active" onclick="showTab('rounds')">Gestione Round</button>
+            <button class="tab-button" onclick="showTab('players')">Stato Giocatori</button>
+        </div>
+
+        <div id="adminRounds" class="admin-section">
+            <h2>Round</h2>
+            <ul id="roundsList" class="rounds-list"></ul>
+        </div>
+
+        <div id="adminPlayers" class="admin-section hidden">
+            <h2>Stato Giocatori per Round</h2>
+            <ul id="playersList" class="players-list"></ul>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://127.0.0.1:8080/api';
+        let pollingInterval = null;
+        let currentTab = 'rounds';
+
+        function showTab(tab) {
+            currentTab = tab;
+            
+            const buttons = document.querySelectorAll('.tab-button');
+            buttons.forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            if (tab === 'rounds') {
+                document.getElementById('adminRounds').classList.remove('hidden');
+                document.getElementById('adminPlayers').classList.add('hidden');
+                loadRounds();
+            } else {
+                document.getElementById('adminRounds').classList.add('hidden');
+                document.getElementById('adminPlayers').classList.remove('hidden');
+                loadPlayersStatus();
+            }
+        }
+
+        async function loadRounds() {
+            try {
+                const response = await fetch(`${API_BASE}/admin/rounds`);
+                const rounds = await response.json();
+                
+                console.log('Rounds ricevuti:', rounds); // Debug
+                
+                const roundsList = document.getElementById('roundsList');
+                roundsList.innerHTML = '';
+                
+                if (!rounds || rounds.length === 0) {
+                    roundsList.innerHTML = '<li style="padding: 20px; text-align: center; color: #666;">Nessun round disponibile</li>';
+                    return;
+                }
+                
+                rounds.forEach(round => {
+                    console.log('Round:', round); // Debug
+                    const roundId = round.roundId || round.id;
+                    const roundNumber = round.roundNumber || round.number;
+                    const questionText = round.questionText || round.question;
+                    const isOpen = round.status === 'OPEN' || round.open;
+                    
+                    const li = document.createElement('li');
+                    li.className = 'round-item';
+                    li.innerHTML = `
+                        <div class="round-info">
+                            <div class="round-title">
+                                Round ${roundNumber || roundId}
+                                <span class="status-badge ${isOpen ? 'status-open' : 'status-closed'}">
+                                    ${isOpen ? 'Aperto' : 'Chiuso'}
+                                </span>
+                            </div>
+                            <div class="round-question">${questionText}</div>
+                        </div>
+                        <div class="button-group">
+                            <button class="btn-small btn-open" onclick="openRound(${roundId})" 
+                                ${isOpen ? 'disabled' : ''}>Apri</button>
+                            <button class="btn-small btn-close" onclick="closeRound(${roundId})"
+                                ${!isOpen ? 'disabled' : ''}>Chiudi</button>
+                        </div>
+                    `;
+                    roundsList.appendChild(li);
+                });
+            } catch (error) {
+                console.error('Errore nel caricamento dei round:', error);
+                document.getElementById('roundsList').innerHTML = 
+                    '<li style="padding: 20px; text-align: center; color: #ef4444;">Errore nel caricamento dei dati</li>';
+            }
+        }
+
+        async function openRound(roundId) {
+            try {
+                const response = await fetch(`${API_BASE}/admin/rounds/${roundId}/open`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (response.ok) {
+                    loadRounds();
+                } else {
+                    const errorText = await response.text();
+                    console.error('Errore apertura round:', response.status, errorText);
+                    alert(`Errore nell'apertura del round (${response.status}): ${errorText}`);
+                }
+            } catch (error) {
+                console.error('Errore:', error);
+                alert('Errore nella connessione al server: ' + error.message);
+            }
+        }
+
+        async function closeRound(roundId) {
+            try {
+                const response = await fetch(`${API_BASE}/admin/rounds/${roundId}/close`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (response.ok) {
+                    loadRounds();
+                } else {
+                    const errorText = await response.text();
+                    console.error('Errore chiusura round:', response.status, errorText);
+                    alert(`Errore nella chiusura del round (${response.status}): ${errorText}`);
+                }
+            } catch (error) {
+                console.error('Errore:', error);
+                alert('Errore nella connessione al server: ' + error.message);
+            }
+        }
+
+        async function loadPlayersStatus() {
+            try {
+                const roundsResponse = await fetch(`${API_BASE}/admin/rounds`);
+                const rounds = await roundsResponse.json();
+                
+                const playersResponse = await fetch(`${API_BASE}/players`);
+                const players = await playersResponse.json();
+                
+                const playersList = document.getElementById('playersList');
+                playersList.innerHTML = '';
+                
+                if (rounds.length === 0) {
+                    playersList.innerHTML = '<li style="padding: 20px; text-align: center; color: #666;">Nessun round disponibile</li>';
+                    return;
+                }
+                
+                for (const round of rounds) {
+                    const submissionsResponse = await fetch(`${API_BASE}/admin/rounds/${round.id}/submissions`);
+                    const submissions = await submissionsResponse.json();
+                    
+                    const li = document.createElement('li');
+                    li.className = 'player-item';
+                    li.innerHTML = `
+                        <div class="round-info">
+                            <div class="round-title">Round ${round.id}</div>
+                            <div class="round-question">${round.question}</div>
+                        </div>
+                        <div class="stats-badge">
+                            ${submissions.length} / ${players.length} risposte
+                        </div>
+                    `;
+                    playersList.appendChild(li);
+                }
+            } catch (error) {
+                console.error('Errore nel caricamento dello stato giocatori:', error);
+                document.getElementById('playersList').innerHTML = 
+                    '<li style="padding: 20px; text-align: center; color: #ef4444;">Errore nel caricamento dei dati</li>';
+            }
+        }
+
+        function startPolling() {
+            pollingInterval = setInterval(() => {
+                if (currentTab === 'rounds') {
+                    loadRounds();
+                } else {
+                    loadPlayersStatus();
+                }
+            }, 3000);
+        }
+
+        // Inizializzazione
+        loadRounds();
+        startPolling();
+    </script>
+</body>
+</html>

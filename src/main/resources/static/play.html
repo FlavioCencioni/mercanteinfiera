@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz Game - Giocatore</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+            max-width: 800px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        h2 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 16px;
+            margin-bottom: 20px;
+            transition: border 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .question-box {
+            background: #f8f9ff;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            border-left: 4px solid #667eea;
+        }
+
+        .items-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .item {
+            background: white;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            border: 2px solid #ddd;
+            cursor: move;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .item:hover {
+            border-color: #667eea;
+            box-shadow: 0 3px 10px rgba(102, 126, 234, 0.2);
+        }
+
+        .item.dragging {
+            opacity: 0.5;
+            transform: scale(1.05);
+        }
+
+        .item-number {
+            background: #667eea;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .success-message {
+            background: #10b981;
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .waiting-message {
+            background: #f59e0b;
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .exit-button {
+            background: #ef4444;
+            margin-top: 20px;
+        }
+
+        .exit-button:hover {
+            background: #dc2626;
+        }
+
+        .submission-info {
+            background: #f0f9ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        .submission-info h3 {
+            color: #0369a1;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="playerNickname">
+            <h1>Inserisci il tuo nickname</h1>
+            <input type="text" id="nicknameInput" placeholder="Il tuo nickname">
+            <button onclick="setNickname()">Inizia a giocare</button>
+        </div>
+
+        <div id="playerGame" class="hidden">
+            <h1>Round Corrente</h1>
+            <div class="question-box">
+                <h2 id="questionText"></h2>
+            </div>
+            <ul id="itemsList" class="items-list"></ul>
+            <button onclick="submitAnswer()">Invia Risposta</button>
+            <button class="exit-button" onclick="exitGame()">Esci</button>
+        </div>
+
+        <div id="playerWaiting" class="hidden">
+            <h1>Risposta Inviata</h1>
+            <div class="success-message">
+                <h2>✓ Risposta inviata con successo!</h2>
+            </div>
+            <div class="submission-info">
+                <h3>La tua risposta:</h3>
+                <ol id="submittedAnswer"></ol>
+            </div>
+            <div class="waiting-message">
+                In attesa del prossimo round...
+            </div>
+            <button class="exit-button" onclick="exitGame()">Esci</button>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://127.0.0.1:8080/api';
+        let currentNickname = '';
+        let currentPlayerId = null;
+        let currentRoundId = null;
+        let draggedElement = null;
+        let pollingInterval = null;
+
+        function exitGame() {
+            if (pollingInterval) {
+                clearInterval(pollingInterval);
+                pollingInterval = null;
+            }
+            
+            document.getElementById('playerGame').classList.add('hidden');
+            document.getElementById('playerWaiting').classList.add('hidden');
+            document.getElementById('playerNickname').classList.remove('hidden');
+            document.getElementById('nicknameInput').value = '';
+            
+            currentNickname = '';
+            currentPlayerId = null;
+            currentRoundId = null;
+        }
+
+        async function setNickname() {
+            const nickname = document.getElementById('nicknameInput').value.trim();
+            if (!nickname) {
+                alert('Inserisci un nickname valido');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/players`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nickname: nickname })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    currentPlayerId = data.playerId;
+                    currentNickname = data.nickname;
+                    document.getElementById('playerNickname').classList.add('hidden');
+                    checkCurrentRound();
+                    startPlayerPolling();
+                } else {
+                    const errorText = await response.text();
+                    console.error('Errore risposta server:', response.status, errorText);
+                    alert(`Errore del server (${response.status}): ${errorText || 'Verifica che il backend sia avviato'}`);
+                }
+            } catch (error) {
+                console.error('Errore:', error);
+                alert('Errore nella connessione al server. Assicurati che Spring Boot sia in esecuzione su http://127.0.0.1:8080');
+            }
+        }
+
+        async function checkCurrentRound() {
+            try {
+                const response = await fetch(`${API_BASE}/rounds/current`);
+                
+                if (response.ok) {
+                    const round = await response.json();
+                    showGameScreen(round);
+                } else {
+                    showWaitingScreen();
+                }
+            } catch (error) {
+                console.error('Errore:', error);
+            }
+        }
+
+        function showGameScreen(round) {
+            document.getElementById('playerWaiting').classList.add('hidden');
+            document.getElementById('playerGame').classList.remove('hidden');
+            
+            currentRoundId = round.roundId;
+            document.getElementById('questionText').textContent = round.questionText;
+            
+            const itemsList = document.getElementById('itemsList');
+            itemsList.innerHTML = '';
+            
+            round.items.forEach((item, index) => {
+                const li = document.createElement('li');
+                li.className = 'item';
+                li.draggable = true;
+                li.dataset.itemId = item.itemId;
+                li.innerHTML = `
+                    <span class="item-number">${index + 1}</span>
+                    <span>${item.label}</span>
+                `;
+                
+                li.addEventListener('dragstart', handleDragStart);
+                li.addEventListener('dragover', handleDragOver);
+                li.addEventListener('drop', handleDrop);
+                li.addEventListener('dragend', handleDragEnd);
+                
+                itemsList.appendChild(li);
+            });
+        }
+
+        function showWaitingScreen() {
+            document.getElementById('playerGame').classList.add('hidden');
+            document.getElementById('playerWaiting').classList.remove('hidden');
+        }
+
+        function handleDragStart(e) {
+            draggedElement = this;
+            this.classList.add('dragging');
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            if (draggedElement !== this) {
+                const items = Array.from(this.parentNode.children);
+                const draggedIndex = items.indexOf(draggedElement);
+                const targetIndex = items.indexOf(this);
+                
+                if (draggedIndex < targetIndex) {
+                    this.parentNode.insertBefore(draggedElement, this.nextSibling);
+                } else {
+                    this.parentNode.insertBefore(draggedElement, this);
+                }
+                
+                updateItemNumbers();
+            }
+        }
+
+        function handleDragEnd() {
+            this.classList.remove('dragging');
+        }
+
+        function updateItemNumbers() {
+            const items = document.querySelectorAll('.item');
+            items.forEach((item, index) => {
+                item.querySelector('.item-number').textContent = index + 1;
+            });
+        }
+
+        async function submitAnswer() {
+            const items = document.querySelectorAll('.item');
+            const orderedItemIds = Array.from(items).map(item => 
+                parseInt(item.dataset.itemId)
+            );
+
+            try {
+                const response = await fetch(`${API_BASE}/submissions`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        playerId: currentPlayerId,
+                        roundId: currentRoundId,
+                        orderedItemIds: orderedItemIds
+                    })
+                });
+
+                if (response.ok) {
+                    const submittedList = document.getElementById('submittedAnswer');
+                    submittedList.innerHTML = '';
+                    items.forEach(item => {
+                        const li = document.createElement('li');
+                        li.textContent = item.querySelector('span:last-child').textContent;
+                        submittedList.appendChild(li);
+                    });
+                    
+                    document.getElementById('playerGame').classList.add('hidden');
+                    document.getElementById('playerWaiting').classList.remove('hidden');
+                } else {
+                    const errorText = await response.text();
+                    console.error('Errore invio risposta:', response.status, errorText);
+                    alert('Errore nell\'invio della risposta: ' + errorText);
+                }
+            } catch (error) {
+                console.error('Errore:', error);
+                alert('Errore nell\'invio della risposta');
+            }
+        }
+
+        function startPlayerPolling() {
+            pollingInterval = setInterval(() => {
+                checkCurrentRound();
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
